@@ -26,10 +26,12 @@ gradlew desktop:release
 
 If you don't see any differences in the settings tab then most probably you have not beaten the game yet (hence do not have the badge for it which this patch checks).
 
+After going into the new tab, you can just repeatedly press the "check for seed" button until you get a seed with your desired artifact/ring.
+
 ### Footnotes
 You might be able to generate a jar file from this patch alone and add that to the compiled game somehow but I am not a java dev but seen things like this before.  
 On the UI/UX side, there's things to imporve, in the future one might add checkboxes/dropdown to check for a concrete artifact/ring but as I see right now, this could prove difficult due to the limited feature-set of the ui lib.  
-If you press the seed check button while you are ingame, the program is going to crash. This is intended behaviour and kept as an easter egg.
+If you press the seed check button while you are ingame (so not on the main menu), the program is going to crash. This is intended behaviour and kept as an easter egg.
 
 # Credits
 For [Evan](https://github.com/00-Evan) for updating this amaizing game.  
