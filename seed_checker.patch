@@ -1,0 +1,214 @@
+diff --git a/core/src/main/java/com/shatteredpixel/shatteredpixeldungeon/levels/RegularLevel.java b/core/src/main/java/com/shatteredpixel/shatteredpixeldungeon/levels/RegularLevel.java
+index a3013b3..16a427a 100644
+--- a/core/src/main/java/com/shatteredpixel/shatteredpixeldungeon/levels/RegularLevel.java
++++ b/core/src/main/java/com/shatteredpixel/shatteredpixeldungeon/levels/RegularLevel.java
+@@ -375,7 +375,6 @@ public abstract class RegularLevel extends Level {
+ 	
+ 	@Override
+ 	protected void createItems() {
+-		
+ 		// drops 3/4/5 items 60%/30%/10% of the time
+ 		int nItems = 3 + Random.chances(new float[]{6, 3, 1});
+ 
+@@ -384,7 +383,6 @@ public abstract class RegularLevel extends Level {
+ 		}
+ 		
+ 		for (int i=0; i < nItems; i++) {
+-
+ 			Item toDrop = Generator.random();
+ 			if (toDrop == null) continue;
+ 
+diff --git a/core/src/main/java/com/shatteredpixel/shatteredpixeldungeon/utils/SeedChecker.java b/core/src/main/java/com/shatteredpixel/shatteredpixeldungeon/utils/SeedChecker.java
+new file mode 100644
+index 0000000..f4618ac
+--- /dev/null
++++ b/core/src/main/java/com/shatteredpixel/shatteredpixeldungeon/utils/SeedChecker.java
+@@ -0,0 +1,65 @@
++package com.shatteredpixel.shatteredpixeldungeon.utils;
++
++import com.shatteredpixel.shatteredpixeldungeon.utils.DungeonSeed;
++import com.shatteredpixel.shatteredpixeldungeon.Dungeon;
++import com.shatteredpixel.shatteredpixeldungeon.levels.Level;
++import com.shatteredpixel.shatteredpixeldungeon.actors.hero.HeroClass;
++import com.shatteredpixel.shatteredpixeldungeon.GamesInProgress;
++import com.shatteredpixel.shatteredpixeldungeon.items.Heap;
++import com.shatteredpixel.shatteredpixeldungeon.items.Item;
++import com.shatteredpixel.shatteredpixeldungeon.items.artifacts.Artifact;
++import com.shatteredpixel.shatteredpixeldungeon.items.rings.Ring;
++import java.util.LinkedList;
++
++
++public class SeedChecker {
++	private final static int namespace_len = 53; // this could be error prone
++
++	private static String getImportantPartOfRingStr(String full_name) {
++		return full_name.substring(namespace_len, full_name.indexOf("@"));
++	}
++
++	private static String getSeedWithArtifact(Dungeon dungeon, boolean ring_is_desired) {
++		boolean hasDesiredThing = false;
++		String nameOfDesiredThing = "";
++		long random_seed = 0;
++		Class<?> cls_to_cmp = ring_is_desired ? Ring.class: Artifact.class;
++
++		while(!hasDesiredThing) {
++			random_seed = DungeonSeed.randomSeed();
++			dungeon.seed = random_seed;
++
++
++			Level level = dungeon.newLevel();
++			// XXX: it's an interesting way to live life when you name something that almost ALWAYS holds only one element and have nothing to do with the similarly named data structure....
++			for(Heap elem: level.heaps.valueList()) {
++				// NOTE: if you want to know the way to obtain the item, use this.
++				// System.out.println(elem.type);
++
++				for(Item item: elem.items) {
++					if (cls_to_cmp.isInstance(item)){
++						hasDesiredThing = true;
++						nameOfDesiredThing = ring_is_desired? getImportantPartOfRingStr(item.toString()) : item.title();
++						break;
++					}
++				}
++
++				if(hasDesiredThing) {
++					// nice
++					break;
++				}
++			}
++		}
++
++		return DungeonSeed.convertToCode(random_seed) + ": " + nameOfDesiredThing;
++	}
++
++	public static String checkSeed(boolean ring_is_desired) {
++		Dungeon dungeon = new Dungeon();
++		// XXX: initializaton depends on the hero class and only that??? something is coupled in a really weird way...
++		GamesInProgress.selectedClass = HeroClass.MAGE;
++		dungeon.init();
++
++		return getSeedWithArtifact(dungeon, ring_is_desired);
++	}
++}
+diff --git a/core/src/main/java/com/shatteredpixel/shatteredpixeldungeon/windows/WndSettings.java b/core/src/main/java/com/shatteredpixel/shatteredpixeldungeon/windows/WndSettings.java
+index 8adad18..a6ea5f9 100644
+--- a/core/src/main/java/com/shatteredpixel/shatteredpixeldungeon/windows/WndSettings.java
++++ b/core/src/main/java/com/shatteredpixel/shatteredpixeldungeon/windows/WndSettings.java
+@@ -22,6 +22,7 @@
+ package com.shatteredpixel.shatteredpixeldungeon.windows;
+ 
+ import com.shatteredpixel.shatteredpixeldungeon.Assets;
++import com.shatteredpixel.shatteredpixeldungeon.Badges;
+ import com.shatteredpixel.shatteredpixeldungeon.Chrome;
+ import com.shatteredpixel.shatteredpixeldungeon.SPDSettings;
+ import com.shatteredpixel.shatteredpixeldungeon.ShatteredPixelDungeon;
+@@ -40,6 +41,7 @@ import com.shatteredpixel.shatteredpixeldungeon.ui.RedButton;
+ import com.shatteredpixel.shatteredpixeldungeon.ui.RenderedTextBlock;
+ import com.shatteredpixel.shatteredpixeldungeon.ui.Toolbar;
+ import com.shatteredpixel.shatteredpixeldungeon.ui.Window;
++import com.shatteredpixel.shatteredpixeldungeon.utils.*;
+ import com.watabou.input.ControllerHandler;
+ import com.watabou.noosa.ColorBlock;
+ import com.watabou.noosa.Game;
+@@ -68,6 +70,7 @@ public class WndSettings extends WndTabbed {
+ 	private DataTab     data;
+ 	private AudioTab    audio;
+ 	private LangsTab    langs;
++	private SeedTab     seed_tab;
+ 
+ 	public static int last_index = 0;
+ 
+@@ -83,6 +86,7 @@ public class WndSettings extends WndTabbed {
+ 		height = display.height();
+ 		add( display );
+ 
++
+ 		add( new IconTab(Icons.get(Icons.DISPLAY)){
+ 			@Override
+ 			protected void select(boolean value) {
+@@ -186,6 +190,27 @@ public class WndSettings extends WndTabbed {
+ 		};
+ 		add( langsTab );
+ 
++
++		if (Badges.isUnlocked(Badges.Badge.VICTORY) || DeviceCompat.isDebug()){
++			// FIXME: do not draw this when the player is in game!
++
++			// why would you need a AddTab method or stg..
++			seed_tab = new SeedTab();
++			seed_tab.setSize(width, 0);
++			height = Math.max(height, langs.height());
++			add( seed_tab );
++
++			add( new IconTab(Icons.get(Icons.SEED)){
++				@Override
++				protected void select(boolean value) {
++					super.select(value);
++					seed_tab.visible = seed_tab.active = value;
++					if (value) last_index = 6;
++				}
++			});
++		}
++
++
+ 		resize(width, (int)Math.ceil(height));
+ 
+ 		layoutTabs();
+@@ -215,6 +240,58 @@ public class WndSettings extends WndTabbed {
+ 		});
+ 	}
+ 
++	private static class SeedTab extends Component {
++		RedButton btnSeedChecker;
++		CheckBox chkArtifactOrRing;
++		boolean ringIsDesired = false;
++		static String value;
++		RenderedTextBlock blk;
++
++		@Override
++		protected void createChildren() {
++			blk = PixelScene.renderTextBlock(value, 9);
++			add(blk);
++
++			btnSeedChecker = new RedButton("Check for seed!"){
++			@Override
++				protected void onClick() {
++					super.onClick();
++					value = SeedChecker.checkSeed(ringIsDesired);
++					// NOTE: would it be too easy just to have an update method? Ikik, architecture does not let it sadly
++					ShatteredPixelDungeon.seamlessResetScene(new Game.SceneChangeCallback() {
++						@Override
++						public void beforeCreate() {
++						}
++						@Override
++						public void afterCreate() {
++							//do nothing
++						}
++					});
++				}
++			};
++
++			add(btnSeedChecker);
++
++			chkArtifactOrRing = new CheckBox("Ring? (default: artifact)") {
++				@Override
++				protected void onClick() {
++					super.onClick();
++					ringIsDesired = !ringIsDesired;
++				}
++
++			};
++			add(chkArtifactOrRing);
++		}
++
++		@Override
++		protected void layout() {
++			btnSeedChecker.setRect(0, height + GAP, width, BTN_HEIGHT);
++			chkArtifactOrRing.setRect(0, BTN_HEIGHT + GAP, width/2-1, BTN_HEIGHT);
++			blk.setPos(0, BTN_HEIGHT *4 + GAP *3);
++		}
++
++	}
++
+ 	private static class DisplayTab extends Component {
+ 
+ 		RenderedTextBlock title;
